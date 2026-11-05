@@ -33,7 +33,9 @@ Mouse and touch work for everything (buttons, slider, drag-and-drop).
 ## Project layout
 - `scenes/main.tscn` — single scene; UI is built in code by `scripts/main.gd`.
 - `scripts/circulation_data.gd` — stations, path geometry, colours (edit here to move things).
-- `scripts/circulation_map.gd` — draws the diagram.
+- `art/circulatory_background.png` — map background, rendered from `art/source/circulatory-path.svg`
+  (the SVG's thin magenta guide path is hidden in the render; the cell path was traced from it).
+- `scripts/circulation_map.gd` — draws the background, station markers, highlight and box labels.
 - `scripts/blood_cell.gd` — the cell.
 - `scripts/station_card.gd`, `scripts/map_drop_area.gd` — quiz drag-and-drop.
 - `docs/SPEC.md` — build specification.

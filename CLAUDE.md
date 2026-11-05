@@ -9,7 +9,9 @@ Target: HTML5 export, mouse + touch + keyboard.
 ## Standards
 - Godot 4.5, GDScript, TABS only, static typing, GL Compatibility renderer.
 - UI built in code; only scene is scenes/main.tscn.
-- All geometry/text lives in scripts/circulation_data.gd.
+- All geometry/text lives in scripts/circulation_data.gd. Path + stations were traced from the
+  guide path (class cls-20) in art/source/circulatory-path.svg; background PNG is that SVG rendered
+  at 1360x1442 with the guide hidden. If the art changes, re-trace and re-render.
 - No numeric oxygen values shown to students.
 
 See docs/SPEC.md for the full spec and README.md for controls.
