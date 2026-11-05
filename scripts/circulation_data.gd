@@ -107,7 +107,7 @@ const STATIONS: Array[Dictionary] = [
 
 ## SEGMENTS[i] is the polyline from station i to station (i + 1) % 10.
 ## First point == STATIONS[i].pos, last point == STATIONS[i + 1].pos.
-const SEGMENTS: Array[PackedVector2Array] = [
+static var SEGMENTS: Array[PackedVector2Array] = [
 	# 0: Right Atrium -> Right Ventricle (through the tricuspid valve)
 	PackedVector2Array([Vector2(295, 350), Vector2(300, 440)]),
 	# 1: Right Ventricle -> Pulmonary Arteries
