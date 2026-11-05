@@ -4,7 +4,7 @@ extends Node2D
 ## Vessels follow CirculationData.SEGMENTS exactly. Map-local space == screen (680 x 720).
 
 const VESSEL_WIDTH: float = 22.0
-const OUTLINE_EXTRA: float = 2.5
+const OUTLINE_EXTRA: float = 3.5
 const PIECE_LENGTH: float = 14.0
 const LABEL_FONT_SIZE: int = 18
 const CAPTION_FONT_SIZE: int = 21
@@ -19,13 +19,18 @@ const COL_TEXT: Color = Color(0.11, 0.1, 0.2)
 const COL_CAPTION: Color = Color(0.36, 0.3, 0.55)
 const COL_DOT: Color = Color(0.12, 0.1, 0.18)
 const COL_HIGHLIGHT: Color = Color(1.0, 0.72, 0.0)
+const COL_LUNG_OUTLINE: Color = Color(0.93, 0.72, 0.0)
+const COL_BODY_OUTLINE: Color = Color(0.15, 0.6, 0.3)
+const COL_LUNG_FILL: Color = Color(0.96, 0.76, 0.84)
+const COL_LUNG_EDGE: Color = Color(0.82, 0.5, 0.64)
+const COL_LUNG_CAP: Color = Color(0.86, 0.3, 0.42, 0.7)
 
 ## Heart outline control points (closed Catmull-Rom spline).
 static var HEART_CTRL: PackedVector2Array = PackedVector2Array([
-	Vector2(250, 352), Vector2(262, 320), Vector2(300, 306), Vector2(338, 318),
-	Vector2(375, 306), Vector2(414, 318), Vector2(432, 352), Vector2(430, 402),
-	Vector2(410, 450), Vector2(372, 482), Vector2(340, 494), Vector2(306, 480),
-	Vector2(272, 448), Vector2(252, 400),
+	Vector2(226, 345), Vector2(241, 305), Vector2(289, 288), Vector2(336, 302),
+	Vector2(382, 288), Vector2(431, 302), Vector2(454, 345), Vector2(451, 408),
+	Vector2(426, 468), Vector2(379, 508), Vector2(339, 522), Vector2(296, 505),
+	Vector2(254, 465), Vector2(229, 405),
 ])
 
 ## Left lung lobe control points (right lobe is the mirror image about x = 340).
@@ -37,16 +42,16 @@ static var LOBE_CTRL: PackedVector2Array = PackedVector2Array([
 
 ## Label block anchor per station: x = edge of the block nearest the marker, y = vertical centre.
 const LABEL_ANCHORS: Array[Vector2] = [
-	Vector2(250, 365),
-	Vector2(250, 448),
+	Vector2(232, 370),
+	Vector2(240, 475),
 	Vector2(135, 190),
 	Vector2(385, 50),
 	Vector2(545, 180),
-	Vector2(440, 380),
-	Vector2(440, 452),
+	Vector2(468, 375),
+	Vector2(468, 445),
 	Vector2(568, 505),
 	Vector2(372, 686),
-	Vector2(82, 430),
+	Vector2(150, 255),
 ]
 
 var _all_labels: bool = true
@@ -122,6 +127,7 @@ func _build_geometry() -> void:
 	_pieces.clear()
 	for seg: int in range(CirculationData.SEGMENTS.size()):
 		var o2: Vector2 = CirculationData.SEGMENT_O2[seg]
+		var outline: Color = _circuit_outline(CirculationData.SEGMENT_CIRCUIT[seg])
 		var count: int = 1
 		if not is_equal_approx(o2.x, o2.y):
 			count = maxi(2, ceili(CirculationData.segment_length(seg) / PIECE_LENGTH))
@@ -130,7 +136,7 @@ func _build_geometry() -> void:
 			var f1: float = float(k + 1) / float(count)
 			var mean_o2: float = lerpf(o2.x, o2.y, (f0 + f1) * 0.5)
 			var col: Color = CirculationData.o2_to_color(mean_o2).lerp(Color.WHITE, 0.35)
-			_pieces.append({"pts": _sub_polyline(seg, f0, f1), "color": col})
+			_pieces.append({"pts": _sub_polyline(seg, f0, f1), "color": col, "outline": outline})
 
 	# Heart and its two halves.
 	_heart_poly = _closed_spline(HEART_CTRL, 8)
@@ -214,6 +220,15 @@ static func _ellipse(center: Vector2, rx: float, ry: float, count: int = 32) -> 
 	return out
 
 
+static func _circuit_outline(circuit: String) -> Color:
+	match circuit:
+		"lung":
+			return COL_LUNG_OUTLINE
+		"body":
+			return COL_BODY_OUTLINE
+	return COL_VESSEL_OUTLINE
+
+
 static func _lighten(c: Color, amount: float) -> Color:
 	return c.lerp(Color.WHITE, amount)
 
@@ -250,8 +265,8 @@ func _draw() -> void:
 
 func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, CirculationData.MAP_SIZE), COL_BG)
-	_box(Rect2(10, 8, 660, 280), COL_LUNG_ZONE, 26, Color(0.85, 0.82, 0.93), 2)
-	_box(Rect2(10, 296, 660, 414), COL_BODY_ZONE, 26, Color(0.94, 0.85, 0.86), 2)
+	_box(Rect2(10, 8, 660, 280), COL_LUNG_ZONE, 26, COL_LUNG_OUTLINE, 3)
+	_box(Rect2(10, 296, 660, 414), COL_BODY_ZONE, 26, COL_BODY_OUTLINE, 3)
 	draw_string(_font, Vector2(30, 44), "Lung Circuit", HORIZONTAL_ALIGNMENT_LEFT, -1, CAPTION_FONT_SIZE, COL_CAPTION)
 	draw_string(_font, Vector2(125, 528), "Body Circuit", HORIZONTAL_ALIGNMENT_LEFT, -1, CAPTION_FONT_SIZE, Color(0.6, 0.28, 0.36))
 
@@ -260,17 +275,14 @@ func _draw_lungs() -> void:
 	for li: int in range(_lobes.size()):
 		var poly: PackedVector2Array = _lobes[li]
 		var is_left: bool = li == 0
-		var fill: Color = Color(0.78, 0.76, 0.95) if is_left else Color(0.96, 0.76, 0.84)
-		var edge: Color = Color(0.6, 0.56, 0.82) if is_left else Color(0.82, 0.5, 0.64)
-		draw_colored_polygon(poly, fill)
+		# Both lungs are the same pink: oxygen is picked up in BOTH lungs.
+		draw_colored_polygon(poly, COL_LUNG_FILL)
 		var closed: PackedVector2Array = poly.duplicate()
 		closed.append(poly[0])
-		draw_polyline(closed, edge, 2.5, true)
+		draw_polyline(closed, COL_LUNG_EDGE, 2.5, true)
 
 		var cx: float = 250.0 if is_left else 430.0
-		var o2: float = 0.15 if is_left else 0.85
-		var cap: Color = CirculationData.o2_to_color(o2)
-		cap.a = 0.75
+		var cap: Color = COL_LUNG_CAP
 		# Wavy horizontal capillaries.
 		for r: int in range(7):
 			var y: float = 100.0 + float(r) * 17.0
@@ -353,31 +365,40 @@ func _draw_heart() -> void:
 	# Inner chambers.
 	var blue_c: Color = Color(0.4, 0.48, 0.9, 0.9)
 	var red_c: Color = Color(0.92, 0.36, 0.44, 0.9)
-	draw_colored_polygon(_ellipse(Vector2(293, 358), 31.0, 31.0), blue_c)
-	draw_colored_polygon(_ellipse(Vector2(302, 438), 33.0, 40.0), blue_c)
-	draw_colored_polygon(_ellipse(Vector2(388, 356), 31.0, 31.0), red_c)
-	draw_colored_polygon(_ellipse(Vector2(385, 438), 33.0, 40.0), red_c)
+	draw_colored_polygon(_ellipse(Vector2(282, 352), 38.0, 36.0), blue_c)
+	draw_colored_polygon(_ellipse(Vector2(292, 450), 40.0, 46.0), blue_c)
+	draw_colored_polygon(_ellipse(Vector2(400, 350), 38.0, 36.0), red_c)
+	draw_colored_polygon(_ellipse(Vector2(390, 450), 40.0, 46.0), red_c)
 	# Septum.
-	draw_line(Vector2(SPLIT_X, 330), Vector2(SPLIT_X, 480), Color(0.55, 0.42, 0.62, 0.7), 3.0, true)
+	draw_line(Vector2(SPLIT_X, 312), Vector2(SPLIT_X, 512), Color(0.55, 0.42, 0.62, 0.7), 3.0, true)
 	var closed: PackedVector2Array = _heart_poly.duplicate()
 	closed.append(_heart_poly[0])
 	draw_polyline(closed, Color(0.7, 0.42, 0.55), 3.0, true)
-	draw_string(_font, Vector2(318, 508), "Heart", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 0.3, 0.45))
+	draw_string(_font, Vector2(320, 512), "Heart", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 0.3, 0.45))
 
 
 func _draw_vessels() -> void:
 	var outline_w: float = VESSEL_WIDTH + OUTLINE_EXTRA * 2.0
 	for piece: Dictionary in _pieces:
 		var pts: PackedVector2Array = piece["pts"]
-		draw_polyline(pts, COL_VESSEL_OUTLINE, outline_w, true)
-		draw_circle(pts[0], outline_w * 0.5, COL_VESSEL_OUTLINE, true, -1.0, true)
-		draw_circle(pts[pts.size() - 1], outline_w * 0.5, COL_VESSEL_OUTLINE, true, -1.0, true)
+		var oc: Color = piece["outline"]
+		draw_polyline(pts, oc, outline_w, true)
+		draw_circle(pts[0], outline_w * 0.5, oc, true, -1.0, true)
+		draw_circle(pts[pts.size() - 1], outline_w * 0.5, oc, true, -1.0, true)
 	for piece: Dictionary in _pieces:
 		var pts: PackedVector2Array = piece["pts"]
 		var col: Color = piece["color"]
 		draw_polyline(pts, col, VESSEL_WIDTH, true)
 		draw_circle(pts[0], VESSEL_WIDTH * 0.5, col, true, -1.0, true)
 		draw_circle(pts[pts.size() - 1], VESSEL_WIDTH * 0.5, col, true, -1.0, true)
+	# The aorta crosses OVER the pulmonary veins: redraw that stretch (outline + fill, flat
+	# ends) on top so the two vessels read as separate tubes instead of a T-junction.
+	# The fill is drawn longer than the outline so the outline's flat ends are hidden.
+	var b0: Vector2 = CirculationData.AORTA_BRIDGE[0]
+	var b1: Vector2 = CirculationData.AORTA_BRIDGE[1]
+	var dir: Vector2 = (b1 - b0).normalized()
+	draw_polyline(PackedVector2Array([b0, b1]), COL_BODY_OUTLINE, outline_w, true)
+	draw_polyline(PackedVector2Array([b0 - dir * 15.0, b1 + dir * 15.0]), _o2_light(1.0), VESSEL_WIDTH, true)
 
 
 func _draw_stations() -> void:

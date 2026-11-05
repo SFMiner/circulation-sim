@@ -35,14 +35,14 @@ const COLOR_OUTLINE: Color = Color(1.0, 0.86, 0.1)
 const STATIONS: Array[Dictionary] = [
 	{
 		"name": "Right Atrium",
-		"pos": Vector2(295, 350),
+		"pos": Vector2(278, 352),
 		"label_side": "left",
 		"circuit": "heart",
 		"info": "Oxygen-poor blood from the body collects in the right atrium, the heart's upper right chamber.",
 	},
 	{
 		"name": "Right Ventricle",
-		"pos": Vector2(300, 440),
+		"pos": Vector2(285, 458),
 		"label_side": "left",
 		"circuit": "heart",
 		"info": "The right ventricle squeezes and pumps oxygen-poor blood out toward the lungs.",
@@ -70,14 +70,14 @@ const STATIONS: Array[Dictionary] = [
 	},
 	{
 		"name": "Left Atrium",
-		"pos": Vector2(385, 345),
+		"pos": Vector2(405, 345),
 		"label_side": "right",
 		"circuit": "heart",
 		"info": "Oxygen-rich blood from the lungs fills the left atrium, the heart's upper left chamber.",
 	},
 	{
 		"name": "Left Ventricle",
-		"pos": Vector2(385, 440),
+		"pos": Vector2(398, 458),
 		"label_side": "right",
 		"circuit": "heart",
 		"info": "The left ventricle is the strongest chamber. It pumps oxygen-rich blood out to the whole body.",
@@ -98,7 +98,7 @@ const STATIONS: Array[Dictionary] = [
 	},
 	{
 		"name": "Vena Cava",
-		"pos": Vector2(100, 430),
+		"pos": Vector2(160, 300),
 		"label_side": "left",
 		"circuit": "body",
 		"info": "The vena cava is the large vein that returns oxygen-poor blood from the body to the heart.",
@@ -108,31 +108,38 @@ const STATIONS: Array[Dictionary] = [
 ## SEGMENTS[i] is the polyline from station i to station (i + 1) % 10.
 ## First point == STATIONS[i].pos, last point == STATIONS[i + 1].pos.
 static var SEGMENTS: Array[PackedVector2Array] = [
-	# 0: Right Atrium -> Right Ventricle (through the tricuspid valve)
-	PackedVector2Array([Vector2(295, 350), Vector2(300, 440)]),
-	# 1: Right Ventricle -> Pulmonary Arteries
-	PackedVector2Array([Vector2(300, 440), Vector2(320, 400), Vector2(330, 300), Vector2(330, 265), Vector2(300, 250), Vector2(200, 250), Vector2(170, 220), Vector2(170, 190)]),
+	# 0: Right Atrium -> Right Ventricle (down the left side of the right heart)
+	PackedVector2Array([Vector2(278, 352), Vector2(285, 458)]),
+	# 1: Right Ventricle -> Pulmonary Arteries (U-turn, up beside the septum, out the top)
+	PackedVector2Array([Vector2(285, 458), Vector2(312, 446), Vector2(320, 415), Vector2(320, 265), Vector2(305, 250), Vector2(200, 250), Vector2(170, 220), Vector2(170, 190)]),
 	# 2: Pulmonary Arteries -> Capillaries of Lungs
 	PackedVector2Array([Vector2(170, 190), Vector2(170, 140), Vector2(200, 110), Vector2(260, 105), Vector2(340, 110)]),
 	# 3: Capillaries of Lungs -> Pulmonary Veins
 	PackedVector2Array([Vector2(340, 110), Vector2(420, 105), Vector2(480, 110), Vector2(510, 140), Vector2(510, 200)]),
-	# 4: Pulmonary Veins -> Left Atrium
-	PackedVector2Array([Vector2(510, 200), Vector2(510, 300), Vector2(480, 330), Vector2(385, 345)]),
-	# 5: Left Atrium -> Left Ventricle (through the mitral valve)
-	PackedVector2Array([Vector2(385, 345), Vector2(385, 440)]),
-	# 6: Left Ventricle -> Aorta and Branches
-	PackedVector2Array([Vector2(385, 440), Vector2(370, 380), Vector2(370, 250), Vector2(390, 225), Vector2(560, 225), Vector2(590, 255), Vector2(590, 400)]),
+	# 4: Pulmonary Veins -> Left Atrium (enters the left heart from the right)
+	PackedVector2Array([Vector2(510, 200), Vector2(510, 300), Vector2(480, 330), Vector2(405, 345)]),
+	# 5: Left Atrium -> Left Ventricle (down the right side of the left heart)
+	PackedVector2Array([Vector2(405, 345), Vector2(408, 400), Vector2(398, 458)]),
+	# 6: Left Ventricle -> Aorta and Branches (U-turn, up beside the septum, arch over the pulmonary veins)
+	PackedVector2Array([Vector2(398, 458), Vector2(370, 446), Vector2(360, 415), Vector2(360, 250), Vector2(385, 225), Vector2(560, 225), Vector2(590, 255), Vector2(590, 400)]),
 	# 7: Aorta and Branches -> Capillaries of Body
 	PackedVector2Array([Vector2(590, 400), Vector2(590, 540), Vector2(560, 580), Vector2(450, 620), Vector2(340, 650)]),
-	# 8: Capillaries of Body -> Vena Cava
-	PackedVector2Array([Vector2(340, 650), Vector2(230, 620), Vector2(130, 580), Vector2(100, 540), Vector2(100, 430)]),
+	# 8: Capillaries of Body -> Vena Cava (up the left side to the top bend)
+	PackedVector2Array([Vector2(340, 650), Vector2(230, 620), Vector2(130, 580), Vector2(100, 540), Vector2(100, 330), Vector2(130, 300), Vector2(160, 300)]),
 	# 9: Vena Cava -> Right Atrium
-	PackedVector2Array([Vector2(100, 430), Vector2(100, 330), Vector2(130, 300), Vector2(220, 300), Vector2(295, 350)]),
+	PackedVector2Array([Vector2(160, 300), Vector2(220, 300), Vector2(278, 352)]),
 ]
 
 ## Oxygen level (0.0 = depleted, 1.0 = full) at the START and END of each segment.
 ## Oxygen is interpolated linearly by distance along the segment.
 ## The cell is half-way through gas exchange when it sits on a capillary station.
+## Which loop each segment belongs to (used for the vessel outline colour):
+## "heart" = inside the heart, "lung" = lung circuit, "body" = body circuit.
+const SEGMENT_CIRCUIT: Array[String] = ["heart", "lung", "lung", "lung", "lung", "heart", "body", "body", "body", "body"]
+
+## Where the aorta passes OVER the pulmonary veins; the map redraws this piece on top.
+const AORTA_BRIDGE: Array[Vector2] = [Vector2(484, 225), Vector2(536, 225)]
+
 const SEGMENT_O2: Array[Vector2] = [
 	Vector2(0.0, 0.0),	# RA -> RV
 	Vector2(0.0, 0.0),	# RV -> PA
