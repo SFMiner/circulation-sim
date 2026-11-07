@@ -29,6 +29,7 @@ var _arrivals_in_play: int = 0
 var _syncing: bool = false
 
 var _map: CirculationMap
+var _fullscreen_btn: Button
 var _cell: BloodCell
 var _drop_area: MapDropArea
 
@@ -94,6 +95,7 @@ func _register_actions() -> void:
 	_add_key_action("circ_step", [KEY_RIGHT, KEY_N])
 	_add_key_action("circ_reset", [KEY_R])
 	_add_key_action("circ_mode", [KEY_M])
+	_add_key_action("circ_fullscreen", [KEY_F11])
 
 
 func _add_key_action(action: String, keys: Array[Key]) -> void:
@@ -108,7 +110,9 @@ func _add_key_action(action: String, keys: Array[Key]) -> void:
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or event.is_echo():
 		return
-	if event.is_action_pressed("circ_mode"):
+	if event.is_action_pressed("circ_fullscreen"):
+		toggle_fullscreen()
+	elif event.is_action_pressed("circ_mode"):
 		toggle_mode()
 	elif event.is_action_pressed("circ_reset"):
 		if quiz_mode:
@@ -231,9 +235,25 @@ func _build_side_panel() -> void:
 	root.add_theme_constant_override("separation", 10)
 	panel.add_child(root)
 
+	# Title row: title centred in the space left of the Full screen button.
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	root.add_child(title_row)
 	var title: Label = _make_label("Journey of a Red Blood Cell", 28, COL_RED)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.clip_text = true
+	title_row.add_child(title)
+	_fullscreen_btn = Button.new()
+	_fullscreen_btn.add_theme_font_size_override("font_size", 15)
+	_fullscreen_btn.custom_minimum_size = Vector2(118, 0)
+	_fullscreen_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fullscreen_btn.tooltip_text = "Full screen on/off (F11)"
+	_fullscreen_btn.pressed.connect(toggle_fullscreen)
+	title_row.add_child(_fullscreen_btn)
+	# Also catches leaving full screen another way (Esc in a browser, window manager).
+	get_viewport().size_changed.connect(_refresh_fullscreen_button)
+	_refresh_fullscreen_button()
 
 	var tabs: HBoxContainer = HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
@@ -642,3 +662,24 @@ func _on_quiz_arrived() -> void:
 	_feedback_label.text = "Correct! %s" % info
 	_feedback_label.add_theme_color_override("font_color", COL_GREEN)
 	_focus_first_card()
+
+
+# ---------------------------------------------------------------- full screen
+
+func is_fullscreen() -> bool:
+	var mode: DisplayServer.WindowMode = DisplayServer.window_get_mode()
+	return mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+
+## Button / F11. On the web this must come from a click or key press (browser rule), which it does.
+func toggle_fullscreen() -> void:
+	if is_fullscreen():
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_refresh_fullscreen_button()
+
+
+func _refresh_fullscreen_button() -> void:
+	if _fullscreen_btn != null:
+		_fullscreen_btn.text = "Exit full screen" if is_fullscreen() else "Full screen"

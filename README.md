@@ -19,6 +19,7 @@ Right Atrium → Right Ventricle → Pulmonary Arteries → **Capillaries of Lun
 | Right arrow / N | Step to next station |
 | R | Reset / restart |
 | M | Switch Explore ↔ Quiz |
+| F11 | Full screen on/off (also the "Full screen" button) |
 | Tab / arrows + Enter | Move between and press buttons/cards |
 
 Mouse and touch work for everything (buttons, slider, drag-and-drop).
